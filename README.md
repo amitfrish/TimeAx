@@ -1,19 +1,25 @@
+The TimeAx algorithm allows performing multiple trajectory alignment (MTA) on time-series datasets of individuals each of which is considered as an individual partial trajectory
+
 ## TimeAx package installation and code requirements
 TimeAx package can be downloaded from github. Please make sure you have the devtools package installed prior to TimeAx installation.
-
-We provide a .R script that includes the required functions to run this code *funcTutorial.R* (located in the "tutorialCode" directory). This script includes detailed documentation about the functions used by this script, apart of the ones that are implemented in the tuMap package. In addition, it includes the required packages for running the script (including: ggplot2, pheatmap, stringr, Biobase, reshape2, cellAlign, glmnet, survival, survAUC, survminer, psupertime, caret, flowCore, SingleCellExperiment, and emdist). We thus recommend to source this script before running the code.
-Please download all the files located in the "Data" directory maintaining their internal hierarchy. In the following code, we will treat the directory where the data is placed as "dataDir", whose path should be defined in the below script.
-In order to run only the tuMap algorithm on your samples without replicating the whole code for the AML CyTOF dataset, please follow the section entitled: "Application of the tuMap algorithm on the AML samples".
 
 ```R
 library(devtools)
 install_github("amitfrish/TimeAx")
 ```
 
-## The AML CyTOF dataset
-In this tutorial we will show an application of the tuMap algorithm on the CyTOF AML dataset that includes single-cell profiling of bone marrow aspirates collected from patients diagnosed with acute myeloid leukemia (AML), a hematologic malignancy that involves the myeloid lineage. Specifically, we used single-cell mass cytometry (CyTOF) to profile human bone marrow aspirates collected from nine healthy individuals and 21 AML patients that were sampled longitudinally at the time of AML diagnosis and 14 days following initiation of an induction therapy. For one patient we profiled an additional sample during remission, and for six patients we profiled an additional bone marrow sample at the time of AML relapse diagnosis (Fig. 4a, Methods, Supp. Tables 1 for demographics, Supp. Table 2).
+## Training a TimeAx model
 
-![alternativetext](Figures/Fig4a.PNG)
+```R
+library(TimeAx)
+data(UBCData)
+
+model = modelCreation(DataUBC,UBCSamples)
+
+# Limiting the number of cores used for the training:
+model = modelCreation(DataUBC,UBCSamples, no_cores = 2)
+
+```
 
 ## The healthy trajectory
 We will first characterize the healthy monocytic development in healthy individuals through a developmental trajectory analysis.
