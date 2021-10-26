@@ -9,6 +9,7 @@ install_github("amitfrish/TimeAx")
 ```
 
 ## Training a TimeAx model
+The user should first train a TimeAx model based on a any kind of logitudinal data of the biological process, with at least 3 samples in each individual trajectory. The model will be later used to infer the pseudotime positions of each sample.
 
 ### GEData: 
 A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
