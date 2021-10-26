@@ -7,7 +7,7 @@ In order to run only the tuMap algorithm on your samples without replicating the
 
 ```R
 library(devtools)
-install_github("shenorrLab/tuMap")
+install_github("amitfrish/TimeAx")
 ```
 
 ## The AML CyTOF dataset
