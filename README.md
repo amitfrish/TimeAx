@@ -55,6 +55,7 @@ Whether to correct the new samples based on the consensus trajectory. The defual
 ```R
 
 library(TimeAx)
+data(UBCData)
 
 pseudotimeStats = predictByConsensus(model,DataUBC)
 pseudotime = pseudotimeStats$predictions
@@ -63,7 +64,8 @@ certainty = pseudotimeStats$certainty
 ```
 
 ## Robustness analysis
-Calculates a robustness score for the TimeAx model. High robustness score implies that the model indeed captures a biological process that changes over time. On the other hand, a low robustness score suggests that the model fails to represent a continuous process over time.
+Calculates a robustness score for the TimeAx model. High robustness score implies that the model indeed captures a biological process that changes over time. On the other hand, a low robustness score suggests that the model fails to represent a continuous process over time. The output of this step is a list containing the robustness pseudotime positions of each sample (robustnessPseudo) and the robustness score for the model (score).
+
 
 ### model:
 A TimeAx model.
@@ -79,9 +81,10 @@ The output list of predictByConsensus. If not provided (NULL), pseudotime will b
 ```R
 
 library(TimeAx)
+data(UBCData)
 
-pseudotimeStats = predictByConsensus(model,DataUBC)
-pseudotime = pseudotimeStats$predictions
-certainty = pseudotimeStats$certainty
+robustnessStats = robustness(model,DataUBC,UBCSamples)
+robustnessPseudo = robustnessStats$robustnessPseudo
+robustnessScore = robustnessStats$score
 
 ```
