@@ -37,7 +37,7 @@ model = modelCreation(DataUBC,UBCSamples, no_cores = 2)
 ```
 
 ## Inferring pseudotime
-Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data.
+Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data. The output of this step is a list containing the pseudotime positions of each sample (predictions) and it's equivilant certainty score (certainty).
 
 ### model:
 A TimeAx model.
@@ -56,7 +56,7 @@ Whether to correct the new samples based on the consensus trajectory. The defual
 
 library(TimeAx)
 
-pseudotimeStats = predictByConsensus(model,DataUBC, no_cores = 2)
+pseudotimeStats = predictByConsensus(model,DataUBC)
 pseudotime = pseudotimeStats$predictions
 certainty = pseudotimeStats$certainty
 
