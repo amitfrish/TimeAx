@@ -61,3 +61,27 @@ pseudotime = pseudotimeStats$predictions
 certainty = pseudotimeStats$certainty
 
 ```
+
+## Robustness analysis
+Calculates a robustness score for the TimeAx model. High robustness score implies that the model indeed captures a biological process that changes over time. On the other hand, a low robustness score suggests that the model fails to represent a continuous process over time.
+
+### model:
+A TimeAx model.
+### GEData: 
+The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.
+### sampleNames 
+A vector containing the individual identity of each sample in the GEData. Same vector as used in the training.
+### no_cores:
+A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
+### pseudo
+The output list of predictByConsensus. If not provided (NULL), pseudotime will be inferred by this function.
+
+```R
+
+library(TimeAx)
+
+pseudotimeStats = predictByConsensus(model,DataUBC)
+pseudotime = pseudotimeStats$predictions
+certainty = pseudotimeStats$certainty
+
+```
