@@ -10,7 +10,21 @@ install_github("amitfrish/TimeAx")
 
 ## Training a TimeAx model
 
+#GEData: 
+A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
+#sampleNames 
+A vector containing the individual identity of each sample in the GEData.
+#numOfIter: 
+Number of consensus trajectories. The default is 100.
+#numOfTopGenes: 
+Length of the conserved-dynamics-seed of features. The default is 50.
+#seed
+The conserved-dynamics-seed. If provided, the alignment process will be conducted based on these features. The default is NULL.
+#no_cores:
+A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
+
 ```R
+
 library(TimeAx)
 data(UBCData)
 
