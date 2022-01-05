@@ -10,7 +10,10 @@ Description: TimeAx, a method that models disease dynamics over time based on ti
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 biocViews: limma
-Depends: R (>= 3.5.0)
-Imports: cellAlign, foreach, parallel, doSNOW, phangorn, fields, sva, Matrix, cppRouting, stats
+Depends: R (>= 4.1.0)
+Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, sva, Matrix,
+        cppRouting, stats
+NeedsCompilation: no
+Packaged: 2022-01-05 13:42:09 UTC; ShenorrLab
