@@ -48,12 +48,9 @@ calculateSampleWeights = function(cors){
 
 ########## Pairwise alignment
 #' @keywords internal
-getAlignment = function(sample1, sample2, trajGenes){
-  mutualGenes = intersect(intersect(row.names(sample1$scaledData),row.names(sample2$scaledData)),trajGenes)
-    cellAlign::globalAlign(sample1$scaledData[mutualGenes,], sample2$scaledData[mutualGenes,],
-                                 scores = list(query = sample1$traj,
-                                               ref = sample2$traj),
-                                 sigCalc = F, numPerm = 20, verbose = F)
+getAlignment = function(sample1, sample2){
+  disMatrix = fields::rdist(t(sample1$scaledData), t(sample2$scaledData))
+  dtw::dtw(disMatrix)
 }
 
 ########## Model training (inner)
@@ -75,7 +72,7 @@ multiAlign = function(listOfSamplesSmall, trajGenes, numOfIter, no_cores){
   allAlignments <- foreach::foreach(firstSampleInd = 1:length(listOfSamplesSmall), .options.snow = opts) %dopar2% {
     firstSample = listOfSamplesSmall[[firstSampleInd]]
     alignmentList = lapply(listOfSamplesSmall, function(secondSample){
-      getAlignment(firstSample,secondSample, trajGenes)
+      getAlignment(firstSample,secondSample)
     })
     setTxtProgressBar(pb, firstSampleInd)
     alignmentList
@@ -101,14 +98,15 @@ multiAlign = function(listOfSamplesSmall, trajGenes, numOfIter, no_cores){
     nodesInTheTree = 1:(phylTree$Nnode+1)
     listOfSamplesForTree = listOfSamplesSmall
     for(i in 1:length(listOfSamplesForTree)){
-      listOfSamplesForTree[[i]]$sampleScore = mean(unlist(lapply(1:length(allAlignments[[i]]),function(j){
-        currAlign = (allAlignments[[i]])[[j]]
-        currAlignmentSteps = currAlign$align[[1]]
+      listOfSamplesForTree[[i]]$sampleScore = mean(sapply(1:length(allAlignments[[i]]),function(j){
+        #currAlign = (allAlignments[[i]])[[j]]
+        #currAlignmentSteps = currAlign$align[[1]]
+        currAlignmentSteps = (allAlignments[[i]])[[j]]
         #mutualGenes = intersect(intersect(row.names(listOfSamplesSmall[[i]]$scaledData),row.names(listOfSamplesSmall[[j]]$scaledData)),trajGenes)
         calculateSampleWeights(stats::cor(listOfSamplesSmall[[i]]$scaledData[,currAlignmentSteps$index1],
                                    listOfSamplesSmall[[j]]$scaledData[,currAlignmentSteps$index2]))
         #currAlign$normalizedDistance
-      })))
+      }))
     }
 
     message('Creating a concensus sample...')
@@ -136,11 +134,10 @@ multiAlign = function(listOfSamplesSmall, trajGenes, numOfIter, no_cores){
         }
 
         if(refSample$type=="Comb" | secSample$type=="Comb"){
-          currAlignment = getAlignment(secSample,refSample,trajGenes)
+          currAlignmentSteps = getAlignment(secSample,refSample)
         }else{
-          currAlignment = (allAlignments[[currNodes[2]]])[[currNodes[1]]]
+          currAlignmentSteps = (allAlignments[[currNodes[2]]])[[currNodes[1]]]
         }
-        currAlignmentSteps = currAlignment$align[[1]]
 
         ## Weighting expression profiles
         # refSamplePriority = 0.5
@@ -322,10 +319,10 @@ detectTrajGenes = function(GEData, sampleNames, numOfTopGenes = 50, topGenes = 4
 #'
 #' @param model A TimeAx model.
 #' @param GEData A matrix containing profiles (columns) of omics measurments (rows).
-#' @param sampleNames Used for the robustness analysis. Always keep as NULL.
+#' @param batchCorrect Whether to correct the new samples based on the consensus trajectory. The defualt is FALSE.
 #' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
 #' @param seed The conserved-dynamics-seed. If provided, the prediction process will be conducted based on these features. Use the model's seed by keeping the the default value of NULL.
-#' @param batchCorrect Whether to correct the new samples based on the consensus trajectory. The defualt is TRUE.
+#' @param sampleNames Used for the robustness analysis. Always keep as NULL.
 #' @return A prediction list consists of:
 #' \item{predictions}{The final pseudotime position for each sample.}
 #' \item{certainty}{A certainty score for each position. Lower scores means higher certainty.}
@@ -342,7 +339,7 @@ detectTrajGenes = function(GEData, sampleNames, numOfTopGenes = 50, topGenes = 4
 #' pseudotime = pseudotimeStats$predictions
 #' certainty = pseudotimeStats$certainty
 #' @export
-predictByConsensus = function(model, GEData, sampleNames = NULL, no_cores = NULL, seed = NULL, batchCorrect = T){
+predictByConsensus = function(model, GEData, batchCorrect = F, no_cores = NULL, seed = NULL, sampleNames = NULL){
   if(is.null(seed)){
     seed = intersect(model$seed, row.names(GEData))
   }
@@ -391,9 +388,10 @@ predictByConsensus = function(model, GEData, sampleNames = NULL, no_cores = NULL
       currMaxIndexes = apply(corMatrix,2,which.max)
       prediction = sampleConsensus$traj[currMaxIndexes]
     }else{
-      prediction = unlist(lapply(1:length(unique(sampleNames)), function(firstSampleInd){
-        currSample = unique(sampleNames)[firstSampleInd]
-        testSample = testDataNorm[,currSample==sampleNames,drop=F]
+      prediction = rep(NA,length(sampleNames))
+      for(currSample in unique(sampleNames)){
+        currIndexes = which(currSample == sampleNames)
+        testSample = testDataNorm[,currIndexes,drop=F]
         corMatrix = t(stats::cor(as.matrix(testSample)[seed,],refNorm[seed,],method = "spearman"))
         corMatrix = 1 - apply(as.matrix(corMatrix),2,function(x){
           unlist(computeNewData(sampleConsensus$traj,sampleConsensus$traj,t(as.matrix(x)),0.1))
@@ -437,8 +435,8 @@ predictByConsensus = function(model, GEData, sampleNames = NULL, no_cores = NULL
 
         setTxtProgressBar(pb, consensusInd)
         #list(prediction = prediction, certentiy = certentiy)
-        currPrediction
-      }))
+        prediction[currIndexes] = currPrediction
+      }
     }
     prediction
   }
@@ -458,8 +456,9 @@ predictByConsensus = function(model, GEData, sampleNames = NULL, no_cores = NULL
 #' @param model A TimeAx model.
 #' @param GEData The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.
 #' @param sampleNames A vector containing the individual identity of each sample in the GEData. Same vector as used in the training.
-#' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
 #' @param pseudo The output list of predictByConsensus. If not provided (NULL), pseudotime will be inferred by this function.
+#' @param batchCorrect Whether to use batch correction, should be identical to the choice for predictByConsensus. The defualt is FALSE.
+#' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
 #' @return A robustness list consists of:
 #' \item{robustnessPseudo}{Robustness pseudotime positions for all samples.}
 #' \item{score}{TimeAx robustness score for the model.}
@@ -476,13 +475,13 @@ predictByConsensus = function(model, GEData, sampleNames = NULL, no_cores = NULL
 #' robustnessPseudo = robustnessStats$robustnessPseudo
 #' robustnessScore = robustnessStats$score
 #' @export
-robustness = function(model, GEData, sampleNames, pseudo = NULL, no_cores = NULL){
+robustness = function(model, GEData, sampleNames, pseudo = NULL, batchCorrect = F, no_cores = NULL){
   if(is.null(pseudo)){
-    pseudo = predictByConsensus(model, GEData, no_cores = no_cores)$predictions
+    pseudo = predictByConsensus(model, GEData, batchCorrect, no_cores)$predictions
   }else{
     pseudo = pseudo$predictions
   }
-  pseudoRobust = predictByConsensus(model, GEData, sampleNames, no_cores = no_cores)$predictions
+  pseudoRobust = predictByConsensus(model, GEData, batchCorrect, no_cores = no_cores, sampleNames = sampleNames)$predictions
   list(robustnessPseudo = pseudoRobust, score = stats::cor(pseudoRobust,pseudo))
 }
 
