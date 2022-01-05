@@ -7,10 +7,10 @@
 predictByConsensus(
   model,
   GEData,
-  sampleNames = NULL,
+  batchCorrect = F,
   no_cores = NULL,
   seed = NULL,
-  batchCorrect = T
+  sampleNames = NULL
 )
 }
 \arguments{
@@ -18,13 +18,13 @@ predictByConsensus(
 
 \item{GEData}{A matrix containing profiles (columns) of omics measurments (rows).}
 
-\item{sampleNames}{Used for the robustness analysis. Always keep as NULL.}
+\item{batchCorrect}{Whether to correct the new samples based on the consensus trajectory. The defualt is FALSE.}
 
 \item{no_cores}{A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.}
 
 \item{seed}{The conserved-dynamics-seed. If provided, the prediction process will be conducted based on these features. Use the model's seed by keeping the the default value of NULL.}
 
-\item{batchCorrect}{Whether to correct the new samples based on the consensus trajectory. The defualt is TRUE.}
+\item{sampleNames}{Used for the robustness analysis. Always keep as NULL.}
 }
 \value{
 A prediction list consists of:
