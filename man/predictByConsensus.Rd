@@ -6,8 +6,7 @@
 \usage{
 predictByConsensus(
   model,
-  GEData,
-  batchCorrect = F,
+  testData,
   no_cores = NULL,
   seed = NULL,
   sampleNames = NULL
@@ -16,9 +15,7 @@ predictByConsensus(
 \arguments{
 \item{model}{A TimeAx model.}
 
-\item{GEData}{A matrix containing profiles (columns) of omics measurments (rows).}
-
-\item{batchCorrect}{Whether to correct the new samples based on the consensus trajectory. The defualt is FALSE.}
+\item{testData}{A matrix containing profiles (columns) of omics measurments (rows).}
 
 \item{no_cores}{A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.}
 
@@ -29,7 +26,7 @@ predictByConsensus(
 \value{
 A prediction list consists of:
 \item{predictions}{The final pseudotime position for each sample.}
-\item{certainty}{A certainty score for each position. Lower scores means higher certainty.}
+\item{uncertainty}{An uncertainty score for each position. Lower scores means higher certainty.}
 }
 \description{
 Infer pseudotime for new samples bassed on the TimeAx model
@@ -43,7 +40,7 @@ model = modelCreation(DataUBC,UBCSamples, no_cores = 2)
 # Inferring pseudotime positions
 pseudotimeStats = predictByConsensus(model,DataUBC, no_cores = 2)
 pseudotime = pseudotimeStats$predictions
-certainty = pseudotimeStats$certainty
+uncertainty = pseudotimeStats$uncertainty
 }
 \references{
 Submitted

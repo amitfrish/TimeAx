@@ -5,22 +5,25 @@
 \title{Training the TimeAx model}
 \usage{
 modelCreation(
-  GEData,
+  trainData,
   sampleNames,
+  ratio = T,
   numOfIter = 100,
-  numOfTopGenes = 50,
+  numOfTopFeatures = 50,
   seed = NULL,
   no_cores = NULL
 )
 }
 \arguments{
-\item{GEData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.}
+\item{trainData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.}
 
-\item{sampleNames}{A vector containing the individual identity of each sample in the GEData.}
+\item{sampleNames}{A vector containing the individual identity of each sample in the train data.}
+
+\item{ratio}{Boolean parameter determining whether the model will be based on the ratios between feature values or the raw values. The default is to use ratios (TRUE) as this allows the model to overcome technical batch effects. For data types with many zeros or discrete values, the raw data should be used (selecting FALSE).}
 
 \item{numOfIter}{Number of consensus trajectories. The default is 100.}
 
-\item{numOfTopGenes}{Length of the conserved-dynamics-seed of features. The default is 50.}
+\item{numOfTopFeatures}{Length of the conserved-dynamics-seed of features. The default is 50.}
 
 \item{seed}{The conserved-dynamics-seed. If provided, the alignment process will be conducted based on these features. The default is NULL.}
 

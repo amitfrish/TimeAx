@@ -1,7 +1,7 @@
 Package: TimeAx
 Type: Package
 Title: Multiple trajectory alignment of time-series data
-Version: 0.1.0
+Version: 0.1.1
 Author: Amit Frishberg [aut, cre],  Neta Milman [aut], Ayelet Alpert [aut], Joachim L. Schultze [aut], Fabian Theis [aut], Shai S. Shen-Orr [aut]
 Maintainer: Amit Frishberg <amfrishberg@gmail.com>
 URL: https://github.com/amitfrish/TimeAx
@@ -13,7 +13,4 @@ LazyData: true
 RoxygenNote: 7.1.2
 biocViews: limma
 Depends: R (>= 4.1.0)
-Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, sva, Matrix,
-        cppRouting, stats
-NeedsCompilation: no
-Packaged: 2022-01-05 13:42:09 UTC; ShenorrLab
+Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, sva, Matrix, cppRouting, stats

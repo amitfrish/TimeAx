@@ -4,25 +4,16 @@
 \alias{robustness}
 \title{Calculate a robustness score for the TimeAx model}
 \usage{
-robustness(
-  model,
-  GEData,
-  sampleNames,
-  pseudo = NULL,
-  batchCorrect = F,
-  no_cores = NULL
-)
+robustness(model, trainData, sampleNames, pseudo = NULL, no_cores = NULL)
 }
 \arguments{
 \item{model}{A TimeAx model.}
 
-\item{GEData}{The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.}
+\item{trainData}{The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.}
 
-\item{sampleNames}{A vector containing the individual identity of each sample in the GEData. Same vector as used in the training.}
+\item{sampleNames}{A vector containing the individual identity of each sample in the train data. Same vector as used in the training.}
 
 \item{pseudo}{The output list of predictByConsensus. If not provided (NULL), pseudotime will be inferred by this function.}
-
-\item{batchCorrect}{Whether to use batch correction, should be identical to the choice for predictByConsensus. The defualt is FALSE.}
 
 \item{no_cores}{A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.}
 }
