@@ -11,13 +11,15 @@ install_github("amitfrish/TimeAx")
 ## Training a TimeAx model
 The user should first train a TimeAx model based on a any kind of logitudinal data of the biological process, with at least 3 samples in each individual trajectory. The model will be later used to infer the pseudotime positions of each sample.
 
-### GEData: 
+### trainData: 
 A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
 ### sampleNames 
-A vector containing the individual identity of each sample in the GEData.
+A vector containing the individual identity of each sample in the trainData.
+### ratio 
+A boolean parameter determining whether the model should be based on feature ratios or the base features. The default is TRUE.
 ### numOfIter: 
 Number of consensus trajectories. The default is 100.
-### numOfTopGenes: 
+### numOfTopFeatures: 
 Length of the conserved-dynamics-seed of features. The default is 50.
 ### seed
 The conserved-dynamics-seed. If provided, the alignment process will be conducted based on these features. The default is NULL.
@@ -37,20 +39,18 @@ model = modelCreation(DataUBC,UBCSamples, no_cores = 2)
 ```
 
 ## Inferring pseudotime
-Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data. The output of this step is a list containing the pseudotime positions of each sample (predictions) and it's equivilant certainty score (certainty).
+Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data. The output of this step is a list containing the pseudotime positions of each sample (predictions) and it's equivilant uncertainty score (uncertainty).
 
 ### model:
 A TimeAx model.
-### GEData: 
+### testData: 
 A matrix containing profiles (columns) of omics measurments (rows).
-### sampleNames 
-Used for the robustness analysis. Always keep as NULL.
 ### no_cores:
 A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
 ### seed
 The conserved-dynamics-seed. If provided, the prediction process will be conducted based on these features. Use the model's seed by keeping the the default value of NULL.
-### batchCorrect
-Whether to correct the new samples based on the consensus trajectory. The defualt is TRUE.
+### sampleNames 
+Used for the robustness analysis. Always keep as NULL.
 
 ```R
 
@@ -59,7 +59,7 @@ data(UBCData)
 
 pseudotimeStats = predictByConsensus(model,DataUBC)
 pseudotime = pseudotimeStats$predictions
-certainty = pseudotimeStats$certainty
+uncertainty = pseudotimeStats$uncertainty
 
 ```
 
@@ -69,14 +69,14 @@ Calculates a robustness score for the TimeAx model. High robustness score implie
 
 ### model:
 A TimeAx model.
-### GEData: 
+### trainData: 
 The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.
 ### sampleNames 
 A vector containing the individual identity of each sample in the GEData. Same vector as used in the training.
-### no_cores:
-A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
 ### pseudo
 The output list of predictByConsensus. If not provided (NULL), pseudotime will be inferred by this function.
+### no_cores:
+A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
 
 ```R
 
