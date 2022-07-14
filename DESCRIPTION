@@ -13,4 +13,4 @@ LazyData: true
 RoxygenNote: 7.1.2
 biocViews: limma
 Depends: R (>= 4.1.0)
-Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, sva, Matrix, cppRouting, stats
+Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, Matrix, cppRouting, stats
