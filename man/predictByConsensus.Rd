@@ -15,7 +15,7 @@ predictByConsensus(
 \arguments{
 \item{model}{A TimeAx model.}
 
-\item{testData}{A matrix containing profiles (columns) of omics measurments (rows).}
+\item{testData}{A matrix containing profiles (columns) of features measurments (rows). Data should provided in similar scales (preferably, non-normalized) as the train data.}
 
 \item{no_cores}{A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.}
 

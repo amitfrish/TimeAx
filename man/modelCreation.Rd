@@ -15,7 +15,7 @@ modelCreation(
 )
 }
 \arguments{
-\item{trainData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.}
+\item{trainData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.}
 
 \item{sampleNames}{A vector containing the individual identity of each sample in the train data.}
 
@@ -23,7 +23,7 @@ modelCreation(
 
 \item{numOfIter}{Number of consensus trajectories. The default is 100.}
 
-\item{numOfTopFeatures}{Length of the conserved-dynamics-seed of features. The default is 50.}
+\item{numOfTopFeatures}{Length of the conserved-dynamics-seed of features. If trainData has less features, all of them will be selected as seed. The default is 50.}
 
 \item{seed}{The conserved-dynamics-seed. If provided, the alignment process will be conducted based on these features. The default is NULL.}
 

@@ -15,11 +15,11 @@ detectSeed(
 )
 }
 \arguments{
-\item{trainData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.}
+\item{trainData}{A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.}
 
 \item{sampleNames}{A vector containing the individual identity of each sample in the train data.}
 
-\item{numOfTopFeatures}{Length of the conserved-dynamics-seed of features. The default is 50.}
+\item{numOfTopFeatures}{Length of the conserved-dynamics-seed of features. If trainData has less features, all of them will be selected as seed. The default is 50.}
 
 \item{topGenes}{Number of initial high variable features to be considered for the seed selection. The default is 4000.}
 
