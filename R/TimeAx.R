@@ -196,7 +196,7 @@ multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
 #' @param sampleNames A vector containing the individual identity of each sample in the train data.
 #' @param ratio Boolean parameter determining whether the model will be based on the ratios between feature values or the raw values. The default is to use ratios (TRUE) as this allows the model to overcome technical batch effects. For data types with many zeros or discrete values, the raw data should be used (selecting FALSE).
 #' @param numOfIter Number of consensus trajectories. The default is 100.
-#' @param numOfTopFeatures Length of the conserved-dynamics-seed of features. The default is 50.
+#' @param numOfTopFeatures Length of the conserved-dynamics-seed of features. If trainData has less features, all of them will be selected as seed. The default is 50.
 #' @param seed The conserved-dynamics-seed. If provided, the alignment process will be conducted based on these features. The default is NULL.
 #' @param no_cores A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
 #' @return A TimeAx model consists of:
@@ -270,7 +270,7 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
 #'
 #' @param trainData A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.
 #' @param sampleNames A vector containing the individual identity of each sample in the train data.
-#' @param numOfTopFeatures Length of the conserved-dynamics-seed of features. The default is 50.
+#' @param numOfTopFeatures Length of the conserved-dynamics-seed of features. If trainData has less features, all of them will be selected as seed. The default is 50.
 #' @param topGenes Number of initial high variable features to be considered for the seed selection. The default is 4000.
 #' @param numOfIterations Number of different random sample selections for the calculation. The default is 20.
 #' @param percOfSamples Fraction of samples from each individual, selected in each sample selection. The default is 0.8
