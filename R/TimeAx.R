@@ -192,7 +192,7 @@ multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
 #'
 #' This function initiate model training using the TimeAx algorithm - performing a multiple trajectory alignment (MTA) on time-series datasets of individuals each of which is considered as an individual partial trajectory.
 #'
-#' @param trainData A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
+#' @param trainData A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.
 #' @param sampleNames A vector containing the individual identity of each sample in the train data.
 #' @param ratio Boolean parameter determining whether the model will be based on the ratios between feature values or the raw values. The default is to use ratios (TRUE) as this allows the model to overcome technical batch effects. For data types with many zeros or discrete values, the raw data should be used (selecting FALSE).
 #' @param numOfIter Number of consensus trajectories. The default is 100.
@@ -234,7 +234,7 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
 
   if(is.null(seed)){
     if(dim(trainData)[1]<numOfTopFeatures){
-      message(paste('Seed size =', dim(trainData)[1],sep = " "))
+      message(paste('Seed size switched to ', dim(trainData)[1],sep = ""))
       seed = row.names(trainData)
     }else{
       seed = detectSeed(listOfSamples, sampleNames, numOfTopFeatures = numOfTopFeatures, no_cores = no_cores)
@@ -268,7 +268,7 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
 
 #' Selecting conserved-dynamics-seed features
 #'
-#' @param trainData A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
+#' @param trainData A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.
 #' @param sampleNames A vector containing the individual identity of each sample in the train data.
 #' @param numOfTopFeatures Length of the conserved-dynamics-seed of features. The default is 50.
 #' @param topGenes Number of initial high variable features to be considered for the seed selection. The default is 4000.
@@ -286,15 +286,13 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
 #' seed = detectSeed(DataUBC,UBCSamples, no_cores = 2)
 #' @export
 detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 4000, numOfIterations = 20, percOfSamples = 0.8, no_cores = NULL){
-  if(class(trainData)=='list'){
-    listOfSamples = trainData
-  }else{
+  listOfSamples = trainData
+  if(!is.null(dim(trainData))){
+    if(dim(trainData)[1]<numOfTopFeatures){
+      message(paste('Seed size switched to ', dim(trainData)[1],sep = ""))
+      return(row.names(trainData))
+    }
     listOfSamples = dataCreation(trainData, sampleNames)
-  }
-
-  if(dim(trainData)[1]<numOfTopFeatures){
-    message(paste('Seed size =', dim(trainData)[1],sep = " "))
-    return(row.names(trainData))
   }
 
   baseDataList = lapply(listOfSamples,function(x){x$baseData})
@@ -365,7 +363,7 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
 #' Infer pseudotime for new samples bassed on the TimeAx model
 #'
 #' @param model A TimeAx model.
-#' @param testData A matrix containing profiles (columns) of omics measurments (rows).
+#' @param testData A matrix containing profiles (columns) of features measurments (rows). Data should provided in similar scales (preferably, non-normalized) as the train data.
 #' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
 #' @param seed The conserved-dynamics-seed. If provided, the prediction process will be conducted based on these features. Use the model's seed by keeping the the default value of NULL.
 #' @param sampleNames Used for the robustness analysis. Always keep as NULL.
