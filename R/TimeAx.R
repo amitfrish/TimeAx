@@ -233,8 +233,14 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
   }
 
   if(is.null(seed)){
-    seed = detectSeed(listOfSamples, sampleNames, numOfTopFeatures = numOfTopFeatures, no_cores = no_cores)
+    if(dim(trainData)[1]<numOfTopFeatures){
+      message(paste('Seed size =', dim(trainData)[1],sep = " "))
+      seed = row.names(trainData)
+    }else{
+      seed = detectSeed(listOfSamples, sampleNames, numOfTopFeatures = numOfTopFeatures, no_cores = no_cores)
+    }
   }
+
 
   listOfSamplesSmall = lapply(listOfSamples,function(currSample){
     currSampleNew = currSample
@@ -285,6 +291,12 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
   }else{
     listOfSamples = dataCreation(trainData, sampleNames)
   }
+
+  if(dim(trainData)[1]<numOfTopFeatures){
+    message(paste('Seed size =', dim(trainData)[1],sep = " "))
+    return(row.names(trainData))
+  }
+
   baseDataList = lapply(listOfSamples,function(x){x$baseData})
   minSize = round(min(unlist(lapply(baseDataList,function(x){dim(x)[2]})))*percOfSamples)
 
