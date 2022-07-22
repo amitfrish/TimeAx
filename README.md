@@ -12,7 +12,7 @@ install_github("amitfrish/TimeAx")
 The user should first train a TimeAx model based on a any kind of logitudinal data of the biological process, with at least 3 samples in each individual trajectory. The model will be later used to infer the pseudotime positions of each sample.
 
 ### trainData: 
-A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. Profiles for each individual should be ordered by chronological time.
+A matrix containing profiles (columns) of omics measurments (rows) from multiple individuals and different time points. For omics data it is better to use raw values instead of normalized ones. Profiles for each individual should be ordered by chronological time.
 ### sampleNames 
 A vector containing the individual identity of each sample in the trainData.
 ### ratio 
