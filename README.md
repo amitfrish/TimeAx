@@ -44,7 +44,7 @@ Based on the TimeAx model, the user can infer the pseudotime position of each sa
 ### model:
 A TimeAx model.
 ### testData: 
-A matrix containing profiles (columns) of omics measurments (rows).
+A matrix containing profiles (columns) of features measurments (rows). Data should provided in similar scales (preferably, non-normalized) as the train data. Seed genes that are missing in the test data will be excluded from the prediction.
 ### no_cores:
 A number for the amount of cores which will be used for the analysis. The defalt (NULL) is total number of cores minus 1.
 ### seed
