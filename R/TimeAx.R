@@ -295,35 +295,32 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
     listOfSamples = dataCreation(trainData, sampleNames)
   }
 
-  baseDataList = lapply(listOfSamples,function(x){x$baseData})
+  baseDataList = lapply(listOfSamples,function(x){x$scaledData})
   minSize = round(min(unlist(lapply(baseDataList,function(x){dim(x)[2]})))*percOfSamples)
 
   message('Initial feature selection')
   mutualGeneNames = row.names(baseDataList[[1]])
-  for(currSample in baseDataList){
-    mutualGeneNames = intersect(mutualGeneNames,row.names(currSample))
-  }
   if(length(mutualGeneNames)<(2*topGenes)){topGenes = floor(length(mutualGeneNames)/2)}
-  dataForHighVar = as.data.frame(t(do.call(cbind,lapply(baseDataList,function(currSampleData){
-    baseOriginal = currSampleData[mutualGeneNames,]
-    t(apply(baseOriginal, 1, function(x){
-      minVal = min(x)
-      maxVal = max(x)
-      (x - minVal)/(maxVal - minVal)
-    }))
-  }))))
 
-  maxUniques = dim(dataForHighVar)[1]+2-2*length(baseDataList)
+  # Combining the data of all subjects into one big data frame #
+  baseDataList = lapply(baseDataList,function(x){x[mutualGeneNames,]})
+  dataForHighVar = as.data.frame(t(do.call(cbind,baseDataList)))
+
+  # Filtering features with many non-unique values #
+  maxUniques = dim(dataForHighVar)[1]+2-2*length(baseDataList) # Counting for all subjects together and removing the first and last samples which are always 0 and 1
   minAllowedUniques = 0.8*maxUniques
   genesUniques = lengths(lapply(dataForHighVar, unique))
   selectedGeneIndexes = which(genesUniques>minAllowedUniques)
   if(length(selectedGeneIndexes)<2*topGenes){
     selectedGeneIndexes = order(genesUniques,decreasing = T)[1:(2*topGenes)]
   }
+
+  # Filtering features with low standard deviation #
   genesSD = apply(dataForHighVar[,selectedGeneIndexes],2,sd)
   selectedGeneIndexes = selectedGeneIndexes[order(genesSD,decreasing = T)[1:topGenes]]
   mutualGeneNames = mutualGeneNames[selectedGeneIndexes]
 
+  # Filtered subject list #
   baseDataList = lapply(baseDataList,function(x){x[mutualGeneNames,]})
 
   message('Choosing conserved-dynamics-seed:')
@@ -363,7 +360,7 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
 #' Infer pseudotime for new samples bassed on the TimeAx model
 #'
 #' @param model A TimeAx model.
-#' @param testData A matrix containing profiles (columns) of features measurments (rows). Data should provided in similar scales (preferably, non-normalized) as the train data.
+#' @param testData A matrix containing profiles (columns) of features measurments (rows). Data should provided in similar scales (preferably, non-normalized) as the train data. Seed genes that are missing in the test data will be excluded from the prediction.
 #' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
 #' @param seed The conserved-dynamics-seed. If provided, the prediction process will be conducted based on these features. Use the model's seed by keeping the the default value of NULL.
 #' @param sampleNames Used for the robustness analysis. Always keep as NULL.
@@ -535,6 +532,44 @@ robustness = function(model, trainData, sampleNames, pseudo = NULL, no_cores = N
   }
   pseudoRobust = predictByConsensus(model, trainData, no_cores = no_cores, sampleNames = sampleNames)$predictions
   list(robustnessPseudo = pseudoRobust, score = stats::cor(pseudoRobust,pseudo))
+}
+
+#' Calculate K-fold cross valudation for the TimeAx model
+#'
+#' @param model A TimeAx model.
+#' @param trainData The matrix containing profiles (columns) of omics measurments (rows), which was used to train the model.
+#' @param sampleNames A vector containing the individual identity of each sample in the train data. Same vector as used in the training.
+#' @param k Number of folds to use.
+#' @param no_cores A number for the amount of cores which will be used for the analysis. The default (NULL) is total number of cores minus 1.
+#' @return A K-fold cross validation score.
+#' @references
+#' Submitted
+#' @examples
+#' data(UBCData)
+#'
+#' # Training the model
+#' model = modelCreation(DataUBC,UBCSamples,no_cores = 2)
+#'
+#' # Calculating K-fold cross validation score
+#' kFoldScore = kFold(model,DataUBC,UBCSamples, k = 5)
+#' @export
+kFold = function(model, trainData, sampleNames, k, no_cores = NULL){
+  message("Calculate global disease pseudotime")
+  pseudoAll = predictByConsensus(model,DataUBC,no_cores = no_cores)$predictions
+
+  message("\nCalculate K-fold pseudotime")
+  patientSplit = split(unique(sampleNames), ceiling(seq_along(unique(sampleNames)) / ceiling(length(unique(sampleNames))/k)))
+  pseuedoK = do.call(rbind, lapply(1:k, function(i){
+    message(paste('\nFold',i,sep = " "))
+    testPatients = patientSplit[[i]]
+    testIndexes = which(sampleNames %in% testPatients)
+    trainPatients = unique(sampleNames)[!(unique(sampleNames) %in% testPatients)]
+    currModel = modelCreation(trainData[,sampleNames %in% trainPatients],sampleNames[sampleNames %in% trainPatients],seed = model$seed,ratio = model$ratio, no_cores = no_cores)
+    cbind(testIndexes,predictByConsensus(currModel,trainData[,sampleNames %in% testPatients], no_cores  = no_cores)$predictions)
+  }))
+  pseuedoKSorted = rep(1,dim(pseuedoK)[2])
+  pseuedoKSorted[pseuedoK[,1]] = pseuedoK[,2]
+  list(Score = cor(pseudoAll,pseuedoKSorted), kFoldPseudo = pseuedoKSorted)
 }
 
 
