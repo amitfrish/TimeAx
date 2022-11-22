@@ -221,8 +221,16 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
   listOfSamples = dataCreation(trainData, sampleNames)
 
   # Checking that features are variable across all patients
-  if(length(which(is.nan(do.call(rbind,lapply(listOfSamples,function(x){rowSums(x$scaledData)})))))>0){
-    message('Some features do not vary across patients time points!')
+  # if(length(which(is.nan(do.call(rbind,lapply(listOfSamples,function(x){rowSums(x$scaledData)})))))>0){
+  #   message('Some features do not vary across patients time points!')
+  #   return(NULL)
+  # }
+  if(max(apply(do.call(rbind,lapply(listOfSamples, function(X){
+    apply(X$scaledData,1,function(x){
+      length(unique(x))
+    })
+  })),2,min))==1){
+    message('None of the features vary across patients time points!')
     return(NULL)
   }
 
@@ -300,6 +308,14 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
 
   message('Initial feature selection')
   mutualGeneNames = row.names(baseDataList[[1]])
+
+  # Removing features with only one unique value in some of the patients #
+  mutualGeneNames = mutualGeneNames[apply(do.call(rbind,lapply(baseDataList, function(X){
+    apply(X,1,function(x){
+      length(unique(x))
+    })
+  })),2,min)>1]
+
   if(length(mutualGeneNames)<(2*topGenes)){topGenes = floor(length(mutualGeneNames)/2)}
 
   # Combining the data of all subjects into one big data frame #
