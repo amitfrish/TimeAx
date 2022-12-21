@@ -12,5 +12,5 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.2
 biocViews: limma
-Depends: R (>= 4.1.0)
-Imports: dtw, foreach, parallel, doSNOW, phangorn, fields, Matrix, cppRouting, stats
+Depends: R (>= 3.5.0)
+Imports: dtw, foreach, parallel, doSNOW, fields, Matrix, cppRouting, stats
