@@ -40,7 +40,7 @@ createTrajectoryFromData = function(sampleData, sampleTraj, seed){
   sampleFixedTraj = cumsum(c(0,unlist(lapply(2:length(sampleTraj),function(i){
     abs(distPCA[i,i-1])
   }))))
-
+  
   (sampleFixedTraj-min(sampleFixedTraj))/(max(sampleFixedTraj)-min(sampleFixedTraj))
 }
 
@@ -74,6 +74,46 @@ getAlignment = function(sample1, sample2){
   dtw::dtw(disMatrix)
 }
 
+########## Build and align a random tree
+alignTree <- function(patientList){
+  if(length(patientList) <= 2){
+    if(length(patientList) == 1){
+      return(patientList)
+    } 
+    
+    refSample = patientList[[1]]
+    secSample = patientList[[2]]
+    if(length(refSample$traj)<length(secSample$traj)){
+      refSample = patientList[[2]]
+      secSample = patientList[[1]]
+    }
+    
+    currAlignmentSteps = getAlignment(secSample,refSample)
+    
+    ## Weighting expression profiles
+    refSamplePriority = refSample$sampleScore/(refSample$sampleScore+secSample$sampleScore)
+    secSamplePriority = secSample$sampleScore/(refSample$sampleScore+secSample$sampleScore)
+    
+    newExp = refSample$scaledData[,currAlignmentSteps$index2]*refSamplePriority +
+      secSample$scaledData[,currAlignmentSteps$index1]*secSamplePriority
+    newTraj = seq(0,1,length.out = dim(newExp)[2])
+    
+    newBase = refSample$baseData[,currAlignmentSteps$index2]*refSamplePriority +
+      secSample$baseData[,currAlignmentSteps$index1]*secSamplePriority
+    
+    fixedTraj = newTraj
+    alignQuality = calculateSampleWeights(refSample$scaledData[,currAlignmentSteps$index2],
+                                          secSample$scaledData[,currAlignmentSteps$index1])
+    
+    
+    list(list(scaledData = newExp, traj = fixedTraj, name = 'Comb', type = "Comb", sampleScore = alignQuality, baseData = newBase))
+  }else{
+    break_at <- floor(length(patientList)/2)
+    alignTree(c(alignTree(patientList[1:break_at]), alignTree(patientList[-seq(break_at)])))
+  } 
+}
+
+
 ########## Model training (inner)
 #' @keywords internal
 multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
@@ -100,11 +140,20 @@ multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
   }
   parallel::stopCluster(cl)
   close(pb)
-
+  
+  # Setting the initial patient scores
+  for(i in 1:length(listOfSamplesSmall)){
+    listOfSamplesSmall[[i]]$sampleScore = mean(sapply(1:length(allAlignments[[i]]),function(j){
+      currAlignmentSteps = (allAlignments[[i]])[[j]]
+      calculateSampleWeights(listOfSamplesSmall[[i]]$scaledData[,currAlignmentSteps$index1],
+                             listOfSamplesSmall[[j]]$scaledData[,currAlignmentSteps$index2])
+    }))
+  }
+  
   #### Consensus list ####
   message('Creating consensus list:')
   cl<-parallel::makeCluster(no_cores)
-  parallel::clusterExport(cl=cl, varlist=c("calculateSampleWeights", "listOfSamplesSmall","getAlignment", "seed","createTrajectoryFromData","allAlignments"), envir=environment())
+  parallel::clusterExport(cl=cl, varlist=c("calculateSampleWeights", "listOfSamplesSmall", "alignTree","getAlignment", "seed","createTrajectoryFromData","allAlignments"), envir=environment())
   doSNOW::registerDoSNOW(cl)
   pb <- utils::txtProgressBar(min = 1, max = numOfIter, style = 3)
   progress <- function(n) setTxtProgressBar(pb, n)
@@ -112,74 +161,12 @@ multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
   `%dopar2%` <- foreach::`%dopar%`
   iterNum = NULL
   consensusList <- foreach::foreach(iterNum = 1:numOfIter, .options.snow = opts) %dopar2% {
-    phylTree = phangorn::upgma(fields::rdist(sample(1:length(listOfSamplesSmall))))
-
-    #### Couple joining ####
-    nodesInTheTree = 1:(phylTree$Nnode+1)
-    listOfSamplesForTree = listOfSamplesSmall
-    for(i in 1:length(listOfSamplesForTree)){
-      listOfSamplesForTree[[i]]$sampleScore = mean(sapply(1:length(allAlignments[[i]]),function(j){
-        currAlignmentSteps = (allAlignments[[i]])[[j]]
-        calculateSampleWeights(listOfSamplesSmall[[i]]$scaledData[,currAlignmentSteps$index1],
-                               listOfSamplesSmall[[j]]$scaledData[,currAlignmentSteps$index2])
-      }))
-    }
-
-    message('Creating a concensus sample...')
-    edgeInformation = cbind(phylTree$edge,phylTree$edge.length)
-    allFatherNodes = edgeInformation[,1]
-
-    while(length(unique(nodesInTheTree))>1){
-      currEdgeInformation = edgeInformation[edgeInformation[,1] %in% unique(allFatherNodes),]
-      fatherOfKnownNodes = unique(allFatherNodes)[which(unlist(lapply(unique(allFatherNodes),function(i){
-        length(which(currEdgeInformation[allFatherNodes==i,2] %in% nodesInTheTree))==2
-      })))]
-      knownNodes = unlist(lapply(fatherOfKnownNodes,function(i){currEdgeInformation[allFatherNodes==i,2]}))
-      for(currFather in fatherOfKnownNodes){
-        currNodes = currEdgeInformation[allFatherNodes==currFather,2]
-        currSample1 = listOfSamplesForTree[[currNodes[1]]]
-        currSample2 = listOfSamplesForTree[[currNodes[2]]]
-
-        refSample = currSample1
-        secSample = currSample2
-        if(length(currSample1$traj)<length(currSample2$traj)){
-          refSample = currSample2
-          secSample = currSample1
-          currNodes = rev(currNodes)
-        }
-
-        if(refSample$type=="Comb" | secSample$type=="Comb"){
-          currAlignmentSteps = getAlignment(secSample,refSample)
-        }else{
-          currAlignmentSteps = (allAlignments[[currNodes[2]]])[[currNodes[1]]]
-        }
-
-        ## Weighting expression profiles
-        refSamplePriority = refSample$sampleScore/(refSample$sampleScore+secSample$sampleScore)
-        secSamplePriority = secSample$sampleScore/(refSample$sampleScore+secSample$sampleScore)
-
-        newExp = refSample$scaledData[,currAlignmentSteps$index2]*refSamplePriority +
-          secSample$scaledData[,currAlignmentSteps$index1]*secSamplePriority
-        newTraj = seq(0,1,length.out = dim(newExp)[2])
-
-        newBase = refSample$baseData[,currAlignmentSteps$index2]*refSamplePriority +
-          secSample$baseData[,currAlignmentSteps$index1]*secSamplePriority
-
-        fixedTraj = newTraj
-        alignQuality = calculateSampleWeights(refSample$scaledData[,currAlignmentSteps$index2],
-                                              secSample$scaledData[,currAlignmentSteps$index1])
-
-
-        listOfSamplesForTree[[currFather]] = list(scaledData = newExp, traj = fixedTraj, name = currFather, type = "Comb", sampleScore = alignQuality, baseData = newBase)
-      }
-      nodesInTheTree = c(nodesInTheTree[!(nodesInTheTree %in% knownNodes)],fatherOfKnownNodes)
-      allFatherNodes = allFatherNodes[!(allFatherNodes %in% fatherOfKnownNodes)]
-    }
-
-    #### Interpreting results ####
-    fullAlignedSample = listOfSamplesForTree[[nodesInTheTree]]
+    
+    listOfSamplesSmallRandom = listOfSamplesSmall[sample(1:length(listOfSamplesSmall))]
+    randomTreeAlignment = alignTree(listOfSamplesSmallRandom)
+    fullAlignedSample = randomTreeAlignment[[1]]
     fullAlignedSample$traj = createTrajectoryFromData(fullAlignedSample$scaledData,fullAlignedSample$traj, seed)
-
+    
     setTxtProgressBar(pb, iterNum)
     fullAlignedSample
   }
@@ -219,7 +206,7 @@ multiAlign = function(listOfSamplesSmall, seed, numOfIter, no_cores){
 #' @importFrom "grDevices" "chull"
 modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, numOfTopFeatures = 50 ,seed = NULL, no_cores = NULL){
   listOfSamples = dataCreation(trainData, sampleNames)
-
+  
   # Checking that features are variable across all patients
   # if(length(which(is.nan(do.call(rbind,lapply(listOfSamples,function(x){rowSums(x$scaledData)})))))>0){
   #   message('Some features do not vary across patients time points!')
@@ -233,13 +220,13 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
     message('None of the features vary across patients time points!')
     return(NULL)
   }
-
+  
   # Checking if there are negative values
   if(min(trainData)<0){
     message('Negative values, switching ratios off!')
     ratio = F
   }
-
+  
   if(is.null(seed)){
     if(dim(trainData)[1]<numOfTopFeatures){
       message(paste('Seed size switched to ', dim(trainData)[1],sep = ""))
@@ -248,17 +235,17 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
       seed = detectSeed(listOfSamples, sampleNames, numOfTopFeatures = numOfTopFeatures, no_cores = no_cores)
     }
   }
-
-
+  
+  
   listOfSamplesSmall = lapply(listOfSamples,function(currSample){
     currSampleNew = currSample
     currSampleNew$scaledData = currSample$scaledData[seed,]
     currSampleNew$baseData = currSample$baseData[seed,]
     currSampleNew
   })
-
+  
   consensusList = multiAlign(listOfSamplesSmall, seed, numOfIter = numOfIter, no_cores = no_cores)
-
+  
   message('Creating a TimeAx model')
   consensusList = lapply(consensusList,function(x){
     if(ratio){
@@ -268,7 +255,7 @@ modelCreation = function(trainData, sampleNames, ratio = T, numOfIter = 100, num
     }
     list(baseData = currData, traj = x$traj)
   })
-
+  
   #### Output ####
   message('Model created')
   list(consensusList = consensusList, seed = seed, ratio = ratio)
@@ -302,26 +289,26 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
     }
     listOfSamples = dataCreation(trainData, sampleNames)
   }
-
+  
   baseDataList = lapply(listOfSamples,function(x){x$scaledData})
   minSize = round(min(unlist(lapply(baseDataList,function(x){dim(x)[2]})))*percOfSamples)
-
+  
   message('Initial feature selection')
   mutualGeneNames = row.names(baseDataList[[1]])
-
+  
   # Removing features with only one unique value in some of the patients #
   mutualGeneNames = mutualGeneNames[apply(do.call(rbind,lapply(baseDataList, function(X){
     apply(X,1,function(x){
       length(unique(x))
     })
   })),2,min)>1]
-
+  
   if(length(mutualGeneNames)<(2*topGenes)){topGenes = floor(length(mutualGeneNames)/2)}
-
+  
   # Combining the data of all subjects into one big data frame #
   baseDataList = lapply(baseDataList,function(x){x[mutualGeneNames,]})
   dataForHighVar = as.data.frame(t(do.call(cbind,baseDataList)))
-
+  
   # Filtering features with many non-unique values #
   maxUniques = dim(dataForHighVar)[1]+2-2*length(baseDataList) # Counting for all subjects together and removing the first and last samples which are always 0 and 1
   minAllowedUniques = 0.8*maxUniques
@@ -330,15 +317,15 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
   if(length(selectedGeneIndexes)<2*topGenes){
     selectedGeneIndexes = order(genesUniques,decreasing = T)[1:(2*topGenes)]
   }
-
+  
   # Filtering features with low standard deviation #
   genesSD = apply(dataForHighVar[,selectedGeneIndexes],2,sd)
   selectedGeneIndexes = selectedGeneIndexes[order(genesSD,decreasing = T)[1:topGenes]]
   mutualGeneNames = mutualGeneNames[selectedGeneIndexes]
-
+  
   # Filtered subject list #
   baseDataList = lapply(baseDataList,function(x){x[mutualGeneNames,]})
-
+  
   message('Choosing conserved-dynamics-seed:')
   if(is.null(no_cores)){
     no_cores = min(numOfIterations,max(1, parallel::detectCores() - 1))
@@ -358,9 +345,9 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
       colnames(newData) = 1:dim(newData)[2]
       newData
     })))
-
+    
     setTxtProgressBar(pb, iteration)
-
+    
     sapply(1:length(mutualGeneNames), function(i){
       currMatrix = sampledData[,seq(i,dim(sampledData)[2],length(mutualGeneNames))]
       mean(stats::cor(currMatrix,method = "spearman"))
@@ -368,7 +355,7 @@ detectSeed = function(trainData, sampleNames, numOfTopFeatures = 50, topGenes = 
   }
   parallel::stopCluster(cl)
   close(pb)
-
+  
   geneScore = colMeans(do.call(rbind,geneScoreList))
   mutualGeneNames[order(geneScore,decreasing = T)[1:numOfTopFeatures]]
 }
@@ -400,24 +387,24 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
   if(is.null(seed)){
     seed = intersect(model$seed, row.names(testData))
   }
-
+  
   if(is.null(no_cores)){
     no_cores = max(1, parallel::detectCores() - 1)
   }
-
+  
   ratio = model$ratio
-
+  
   testData = testData[seed,,drop = F]
   if(ratio){
     testData = calculateRatios(testData)
   }
-
+  
   cleanModel = lapply(model$consensusList,function(x){
     #currData = calculateRatios(x$baseData[seed,])
     currData = x$baseData[row.names(testData),]
     list(data = currData, traj = x$traj)
   })
-
+  
   if(is.null(sampleNames)){
     message('Predicting samples pseudotime positions:')
   }else{
@@ -435,20 +422,20 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
     sampleConsensus = cleanModel[[consensusInd]]
     refNorm = sampleConsensus$data
     testDataNorm = testData
-
+    
     pairsToUse = which(rowSums(testDataNorm)!=Inf & !is.nan(rowSums(testDataNorm)) &
-            rowSums(refNorm)!=Inf & !is.nan(rowSums(refNorm)))
-
+                         rowSums(refNorm)!=Inf & !is.nan(rowSums(refNorm)))
+    
     refNorm = refNorm[pairsToUse,]
     testDataNorm = testDataNorm[pairsToUse,,drop=F]
-
+    
     refMeans = rowMeans(refNorm)
     refTestRatio = stats::median(refMeans/rowMeans(testDataNorm))
     refSD = apply(refNorm,1,sd)
     refNorm = (refNorm - refMeans)/refSD
-
+    
     testDataNorm = (testDataNorm*refTestRatio-refMeans)/refSD
-
+    
     selectedPairs = row.names(testDataNorm)
     outDist = rowMeans(testDataNorm)
     outDistP = 2*stats::pnorm(abs(outDist), lower.tail = F)
@@ -456,10 +443,10 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
     if(length(selectedPairs)<length(seed)){
       selectedPairs = row.names(testDataNorm)
     }
-
+    
     refNorm = refNorm[selectedPairs,]
     testDataNorm = testDataNorm[selectedPairs,,drop=F]
-
+    
     if(is.null(sampleNames)){
       corMatrix = stats::cor(refNorm,testDataNorm,method = "spearman")
       corMatrix = computeNewData(sampleConsensus$traj,sampleConsensus$traj,corMatrix,0.1)
@@ -482,7 +469,7 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
           })
         }
         endMatrix = rbind(matrix(1, ncol = 1, nrow = dim(corMatrix)[1]),0)
-
+        
         namesForBigMatrix = c("Start", paste("Cons",1:dim(corMatrix)[1],1,sep="_"))
         if(dim(corMatrix)[2]>1){
           namesForBigMatrix = c(namesForBigMatrix, unlist(lapply(2:dim(corMatrix)[2], function(i){
@@ -490,18 +477,18 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
           })))
         }
         namesForBigMatrix = c(namesForBigMatrix,"End")
-
+        
         matrixList = c(list(startMatrix),matrixList,list(endMatrix))
         bigMatrix = Matrix::.bdiag(matrixList)
         colnames(bigMatrix) = row.names(bigMatrix) = namesForBigMatrix
-
+        
         dfForGraph = data.frame(from = namesForBigMatrix[bigMatrix@i+1], to = namesForBigMatrix[bigMatrix@j+1], cost = bigMatrix@x)
         modelGraph = cppRouting::makegraph(dfForGraph,directed = T)
         shortestPath<-cppRouting::get_path_pair(modelGraph,from="Start",to="End")
         pathNodes = rev(shortestPath$Start_End)
         finalIndexesForPrediction = as.numeric(sapply(pathNodes[2:(length(pathNodes)-1)],function(x){unlist(strsplit(x,"_"))[2]}))
         currPrediction = sampleConsensus$traj[finalIndexesForPrediction]
-
+        
         setTxtProgressBar(pb, consensusInd)
         prediction[currIndexes] = currPrediction
       }
@@ -510,7 +497,7 @@ predictByConsensus = function(model, testData, no_cores = NULL, seed = NULL, sam
   }
   parallel::stopCluster(cl)
   close(pb)
-
+  
   predictionMatrix = do.call(rbind,predictionStats)
   finalPredictions = colMeans(predictionMatrix)
   sampleUnCertainty = apply(predictionMatrix,2,sd)
@@ -572,7 +559,7 @@ robustness = function(model, trainData, sampleNames, pseudo = NULL, no_cores = N
 kFold = function(model, trainData, sampleNames, k, no_cores = NULL){
   message("Calculate global disease pseudotime")
   pseudoAll = predictByConsensus(model,DataUBC,no_cores = no_cores)$predictions
-
+  
   message("\nCalculate K-fold pseudotime")
   patientSplit = split(unique(sampleNames), ceiling(seq_along(unique(sampleNames)) / ceiling(length(unique(sampleNames))/k)))
   pseuedoK = do.call(rbind, lapply(1:k, function(i){
