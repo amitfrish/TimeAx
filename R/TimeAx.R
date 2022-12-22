@@ -558,7 +558,7 @@ robustness = function(model, trainData, sampleNames, pseudo = NULL, no_cores = N
 #' @export
 kFold = function(model, trainData, sampleNames, k, no_cores = NULL){
   message("Calculate global disease pseudotime")
-  pseudoAll = predictByConsensus(model,DataUBC,no_cores = no_cores)$predictions
+  pseudoAll = predictByConsensus(model,trainData,no_cores = no_cores)$predictions
   
   message("\nCalculate K-fold pseudotime")
   patientSplit = split(unique(sampleNames), ceiling(seq_along(unique(sampleNames)) / ceiling(length(unique(sampleNames))/k)))
