@@ -7,15 +7,16 @@ The TimeAx pipeline is combined of two simple steps, which require only a longit
 ![TimeAx pipeline](images/pipeline.png)
 
 ## TimeAx package installation and code requirements
-TimeAx package can be downloaded from github. Please make sure you have the devtools package installed prior to TimeAx installation.
+TimeAx package can be downloaded from github. Please make sure you have the devtools package installed prior to TimeAx installation. TimeAx installation should take few minutes depending how many of the dependent packages are already installed. 
 
 ```R
 library(devtools)
 install_github("amitfrish/TimeAx")
 ```
+
 <br /><br />
 ## Step 1+2: training a TimeAx model (seed selection + multiple trajectory analysis)
-The user should first train a TimeAx model based on a any kind of logitudinal data of the biological process, with at least 3 samples in each individual trajectory. The modeling will run automatically two internal steps: seed selection and multiple trajectory analysis based on the selected seed. If the user has its own seed, this can be included and will override the seed selection step. The model will be later used to infer the pseudotime positions of each sample.
+The user should first train a TimeAx model based on a any kind of logitudinal data of the biological process, with at least 3 samples in each individual trajectory. The modeling will run automatically two internal steps: seed selection and multiple trajectory analysis based on the selected seed. If the user has its own seed, this can be included and will override the seed selection step. The model will be later used to infer the pseudotime positions of each sample. This step should take few minutes depending how the size of the train cohort.
 
 ```R
 library(TimeAx)
@@ -43,7 +44,7 @@ A number for the amount of cores which will be used for the analysis. The defalt
 
 <br /><br />
 ## Step 3: Inferring pseudotime
-Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data. The output of this step is a list containing the pseudotime positions of each sample (predictions) and it's equivilant uncertainty score (uncertainty).
+Based on the TimeAx model, the user can infer the pseudotime position of each sample, assuming its profile includes the same features as the train data. The output of this step is a list containing the pseudotime positions of each sample (predictions) and it's equivilant uncertainty score (uncertainty). This step is relatively quick and should take seconds to few minutes depending how the size of the test cohort.
 
 ```R
 
